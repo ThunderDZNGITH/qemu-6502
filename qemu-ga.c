@@ -159,7 +159,8 @@ static void ga_log(const gchar *domain, GLogLevelFlags level,
                    const gchar *msg, gpointer opaque)
 {
     GAState *s = opaque;
-    GTimeVal time;
+    GDateTime *datetime;
+    gint64 real_time;
     const char *level_str = ga_log_level_str(level);
 
     if (!ga_logging_enabled(s)) {
@@ -174,10 +175,17 @@ static void ga_log(const gchar *domain, GLogLevelFlags level,
 #else
     if (level & s->log_level) {
 #endif
-        g_get_current_time(&time);
+        // Remplace g_get_current_time par g_get_real_time
+        real_time = g_get_real_time();
+        datetime = g_date_time_new_from_unix_utc(real_time / 1000000);
+        gchar *formatted_time = g_date_time_format(datetime, "%s.%f");
+
         fprintf(s->log_file,
-                "%lu.%lu: %s: %s\n", time.tv_sec, time.tv_usec, level_str, msg);
+                "%s: %s: %s\n", formatted_time, level_str, msg);
         fflush(s->log_file);
+
+        g_date_time_unref(datetime);
+        g_free(formatted_time);
     }
 }
 
